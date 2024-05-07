@@ -3,21 +3,26 @@
 public class ChatGptService : IChatGptService
 {
     readonly OpenAIClient _client;
-    List<ChatRequestMessage>? _chatRequestMessages;
+    List<ChatRequestMessage> _chatRequestMessages;
+    JsonSerializerOptions _serializerOptions;
 
     public ChatGptService()
     {
         string apiKey = GetApiKey();
         _client = new(apiKey, new OpenAIClientOptions());
         _chatRequestMessages = [];
+        _serializerOptions = new JsonSerializerOptions()
+        {
+            WriteIndented = true,
+        };
     }
 
     static string GetApiKey() => "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";
 
-    public void ClearChatRequestMessages() => _chatRequestMessages?.Clear();
-    public void AddRequestSystemMessage(string? message) => _chatRequestMessages?.Add(new ChatRequestSystemMessage(message));
-    public void AddRequestUserMessage(string? message) => _chatRequestMessages?.Add(new ChatRequestUserMessage(message));
-    public void AddRequestAssistantMessage(string? message) => _chatRequestMessages?.Add(new ChatRequestAssistantMessage(message));
+    public void ClearChatRequestMessages() => _chatRequestMessages.Clear();
+    public void AddRequestSystemMessage(string? message) => _chatRequestMessages.Add(new ChatRequestSystemMessage(message));
+    public void AddRequestUserMessage(string? message) => _chatRequestMessages.Add(new ChatRequestUserMessage(message));
+    public void AddRequestAssistantMessage(string? message) => _chatRequestMessages.Add(new ChatRequestAssistantMessage(message));
 
     public async Task<string> SendRequestAsync(string gptModel = "gpt-3.5-turbo", float temperature = (float)0.1, int maxTokens = 500, long seed = 42)
     {
@@ -40,13 +45,27 @@ public class ChatGptService : IChatGptService
         return assistantMessageContent;
     }
 
-    public string? GetChatHistory()
+    public string? GetChatHistory() // issue with deserialization: User and Assistant Message have protected set on Content and it is not populated in deserialization
     {
-        //return JsonSerializer.Serialize(_chatRequestMessages);
-        string json = JsonConvert.SerializeObject(_chatRequestMessages, Formatting.Indented, new JsonSerializerSettings
+        //string json = JsonConvert.SerializeObject(_chatRequestMessages, Formatting.Indented, new JsonSerializerSettings
+        //{
+        //    TypeNameHandling = TypeNameHandling.Objects
+        //});
+        List<Message> chatHistory = [];
+
+        for (int messageNumber = 0; messageNumber < _chatRequestMessages?.Count; messageNumber++)
         {
-            TypeNameHandling = TypeNameHandling.Objects
-        });
+            ChatRequestMessage? message = _chatRequestMessages[messageNumber];
+
+            if (message is ChatRequestSystemMessage systemMessage)
+                chatHistory.Add(new($"{nameof(ChatRequestSystemMessage)}", systemMessage.Content));
+            else if (message is ChatRequestUserMessage userMessage)
+                chatHistory.Add(new($"{nameof(ChatRequestUserMessage)}", userMessage.Content));
+            else if (message is ChatRequestAssistantMessage assistantMessage)
+                chatHistory.Add(new($"{nameof(ChatRequestAssistantMessage)}", assistantMessage.Content));
+        }
+
+        string json = JsonSerializer.Serialize(chatHistory, _serializerOptions);
 
         return json;
     }
@@ -54,12 +73,28 @@ public class ChatGptService : IChatGptService
     public void RestoreChatRequestMessagesFromChatHistory(string? chatHistory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(chatHistory, nameof(chatHistory));
+        //_chatRequestMessages = JsonConvert.DeserializeObject<List<ChatRequestMessage>>(chatHistory, new JsonSerializerSettings
+        //{
+        //    TypeNameHandling = TypeNameHandling.Objects
+        //});
 
-        //_chatRequestMessages = JsonSerializer.Deserialize<IList<ChatRequestMessage>>(chatHistory);
-        _chatRequestMessages = JsonConvert.DeserializeObject<List<ChatRequestMessage>>(chatHistory, new JsonSerializerSettings
+        _chatRequestMessages.Clear();
+
+        List<Message>? chatHistoryList = JsonSerializer.Deserialize<List<Message>>(chatHistory);
+
+        if (chatHistoryList != null)
         {
-            TypeNameHandling = TypeNameHandling.Objects
-        });
+            foreach (var message in chatHistoryList)
+            {
+                if (message.Type == $"{nameof(ChatRequestSystemMessage)}")
+                    _chatRequestMessages.Add(new ChatRequestSystemMessage(message.Content));
+                else if (message.Type == $"{nameof(ChatRequestUserMessage)}")
+                    _chatRequestMessages.Add(new ChatRequestUserMessage(message.Content));
+                else if (message.Type == $"{nameof(ChatRequestAssistantMessage)}")
+                    _chatRequestMessages.Add(new ChatRequestAssistantMessage(message.Content));
+            }
+        }
+        
     }
 
     public string? ChatRequestMessagesToString(bool omitSystemMessages = false, bool omitUserMessages = false, bool omitAssistantMessages = false)
@@ -82,5 +117,17 @@ public class ChatGptService : IChatGptService
         }
 
         return chatRequestMessages;
+    }
+
+    struct Message()
+    {
+        public Message(string type, string content) : this()
+        {
+            Type = type;
+            Content = content;
+        }
+
+        public string? Type { get; set; }
+        public string? Content { get; set; }
     }
 }
