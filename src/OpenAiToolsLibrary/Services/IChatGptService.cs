@@ -5,6 +5,9 @@ public interface IChatGptService
 {
     List<string> GptModels { get; }
     string? SelectedGptModel { get; set; }
+    float Temperature { get; set; }
+    int MaxTokens { get; set; }
+    long Seed { get; set; }
 
     void AddRequestAssistantMessage(string? message);
     void AddRequestSystemMessage(string? message);

@@ -20,9 +20,9 @@ public class ChatGptService : IChatGptService
 
     public List<string> GptModels { get; private set; }
     public string? SelectedGptModel { get; set; }
-    float Temperature { get; set; } = (float)0.1;
-    int MaxTokens { get; set; } = 500;
-    long Seed { get; set; } = 42;
+    public float Temperature { get; set; } = (float)0.1;
+    public int MaxTokens { get; set; } = 500;
+    public long Seed { get; set; } = 42;
 
     public void ClearChatRequestMessages() => _chatRequestMessages.Clear();
     public void AddRequestSystemMessage(string? message) => _chatRequestMessages.Add(new ChatRequestSystemMessage(message));
