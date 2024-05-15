@@ -23,6 +23,8 @@ public class SpeechToTextService(IOpenAiClientService openAiClient) : ISpeechToT
         Response<AudioTranscription>? transcriptionResponse = await _client.GetAudioTranscriptionAsync(transcriptionOptions);
         AudioTranscription? transcription = transcriptionResponse?.Value;
 
+        await audioStream.DisposeAsync();
+
         return transcription?.Text;
     }
 }

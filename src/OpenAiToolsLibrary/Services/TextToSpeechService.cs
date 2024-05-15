@@ -14,9 +14,9 @@ public class TextToSpeechService(IOpenAiClientService openAiClient) : ITextToSpe
     {
         if (_client == null) throw new NullReferenceException("Open AI client is null.");
 
-        if (speechVoice == null)
+        if (speechVoice == default)
         {
-            if (SelectedVoice == null)
+            if (SelectedVoice == default)
                 SelectedVoice = Voices.FirstOrDefault();
 
             speechVoice = SelectedVoice;
