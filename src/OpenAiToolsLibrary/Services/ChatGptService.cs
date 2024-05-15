@@ -2,30 +2,53 @@
 
 public class ChatGptService : IChatGptService
 {
-    readonly OpenAIClient _client;
-    List<ChatRequestMessage> _chatRequestMessages;
-    JsonSerializerOptions _serializerOptions;
+    readonly OpenAIClient? _client;
+    readonly List<ChatRequestMessage> _chatRequestMessages;
+    readonly JsonSerializerOptions _serializerOptions;
 
-    public ChatGptService()
+    public ChatGptService(IOpenAiClientService openAiClient)
     {
-        string apiKey = GetApiKey();
-        _client = new(apiKey, new OpenAIClientOptions());
+        _client = openAiClient.GetClient();
         _chatRequestMessages = [];
         _serializerOptions = new JsonSerializerOptions()
         {
             WriteIndented = true,
         };
+
+        GptModels = ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo-preview"];
     }
 
-    static string GetApiKey() => "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";
+    public List<string> GptModels { get; private set; }
+    public string? SelectedGptModel { get; set; }
+    float Temperature { get; set; } = (float)0.1;
+    int MaxTokens { get; set; } = 500;
+    long Seed { get; set; } = 42;
 
     public void ClearChatRequestMessages() => _chatRequestMessages.Clear();
     public void AddRequestSystemMessage(string? message) => _chatRequestMessages.Add(new ChatRequestSystemMessage(message));
     public void AddRequestUserMessage(string? message) => _chatRequestMessages.Add(new ChatRequestUserMessage(message));
     public void AddRequestAssistantMessage(string? message) => _chatRequestMessages.Add(new ChatRequestAssistantMessage(message));
 
-    public async Task<string> SendRequestAsync(string gptModel = "gpt-3.5-turbo", float temperature = (float)0.1, int maxTokens = 500, long seed = 42)
+    public async Task<string> SendRequestAsync(string? gptModel = default, float temperature = default, int maxTokens = default, long seed = default)
     {
+        if (_client == null) throw new NullReferenceException("Open AI client is null.");
+
+        if (gptModel == default)
+        {
+            SelectedGptModel ??= GptModels.FirstOrDefault();
+            gptModel = SelectedGptModel;
+        }
+
+        if (temperature == default)
+            temperature = Temperature;
+
+        if (maxTokens == default)
+            maxTokens = MaxTokens;
+
+        if (seed == default)
+            seed = Seed;
+
+
         ChatCompletionsOptions chatCompletionsOptions = new(gptModel, _chatRequestMessages)
         {
             Temperature = temperature,
@@ -94,7 +117,7 @@ public class ChatGptService : IChatGptService
                     _chatRequestMessages.Add(new ChatRequestAssistantMessage(message.Content));
             }
         }
-        
+
     }
 
     public string? ChatRequestMessagesToString(bool omitSystemMessages = false, bool omitUserMessages = false, bool omitAssistantMessages = false)
