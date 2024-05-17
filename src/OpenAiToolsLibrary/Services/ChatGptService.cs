@@ -16,6 +16,7 @@ public class ChatGptService : IChatGptService
         };
 
         GptModels = ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo-preview"];
+        SelectedGptModel = GptModels.FirstOrDefault();
     }
 
     public List<string> GptModels { get; private set; }
@@ -34,10 +35,7 @@ public class ChatGptService : IChatGptService
         if (_client == null) throw new NullReferenceException("Open AI client is null.");
 
         if (gptModel == default)
-        {
-            SelectedGptModel ??= GptModels.FirstOrDefault();
             gptModel = SelectedGptModel;
-        }
 
         if (temperature == default)
             temperature = Temperature;
