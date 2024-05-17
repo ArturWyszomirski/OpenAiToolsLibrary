@@ -3,9 +3,15 @@ using System.Reflection;
 
 namespace OpenAiToolsLibrary.Services;
 
-public class TextToSpeechService(IOpenAiClientService openAiClient) : ITextToSpeechService
+public class TextToSpeechService : ITextToSpeechService
 {
-    readonly OpenAIClient? _client = openAiClient.GetClient();
+    readonly OpenAIClient? _client;
+
+    public TextToSpeechService(IOpenAiClientService openAiClient)
+    {
+        _client = openAiClient.GetClient();
+        SelectedVoice = Voices.FirstOrDefault();
+    }
 
     public List<SpeechVoice> Voices { get => GetVoices(); }
     public SpeechVoice SelectedVoice { get; set; }
@@ -15,13 +21,7 @@ public class TextToSpeechService(IOpenAiClientService openAiClient) : ITextToSpe
         if (_client == null) throw new NullReferenceException("Open AI client is null.");
 
         if (speechVoice == default)
-        {
-            if (SelectedVoice == default)
-                SelectedVoice = Voices.FirstOrDefault();
-
             speechVoice = SelectedVoice;
-        }
-        
 
         SpeechGenerationOptions speechOptions = new()
         {
