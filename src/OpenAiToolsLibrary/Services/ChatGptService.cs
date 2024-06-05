@@ -46,7 +46,6 @@ public class ChatGptService : IChatGptService
         if (seed == default)
             seed = Seed;
 
-
         ChatCompletionsOptions chatCompletionsOptions = new(gptModel, _chatRequestMessages)
         {
             Temperature = temperature,
