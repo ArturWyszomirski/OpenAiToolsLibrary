@@ -2,20 +2,14 @@
 
 public class OpenAiClientService : IOpenAiClientService
 {
-    OpenAIClient? _client;
+    readonly OpenAIClient? _client;
 
-    public OpenAIClient GetClient()
+    public OpenAiClientService(string apiKey)
     {
-        if (_client == null)
-        {
-            string apiKey = GetApiKey();
-            _client = new(apiKey, new OpenAIClientOptions());
-        }
+        _client = new(apiKey, new OpenAIClientOptions());
 
         if (_client == null) throw new NullReferenceException("Open AI client is null.");
-
-        return _client;
     }
 
-    static string GetApiKey() => "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";
+    public OpenAIClient? GetClient() => _client;
 }
