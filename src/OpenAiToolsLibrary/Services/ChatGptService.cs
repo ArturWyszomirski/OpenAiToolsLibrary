@@ -21,9 +21,9 @@ public class ChatGptService : IChatGptService
 
     public List<string> GptModels { get; private set; }
     public string? SelectedGptModel { get; set; }
-    public float Temperature { get; set; } = (float)0.1;
-    public int MaxTokens { get; set; } = 500;
-    public long Seed { get; set; } = 42;
+    public float Temperature { get; set; }
+    public int MaxTokens { get; set; }
+    public long Seed { get; set; }
 
     public void ClearChatRequestMessages() => _chatRequestMessages.Clear();
     public void AddRequestSystemMessage(string? message) => _chatRequestMessages.Add(new ChatRequestSystemMessage(message));
@@ -35,23 +35,24 @@ public class ChatGptService : IChatGptService
         if (_client == null) throw new NullReferenceException("Open AI client is null.");
 
         if (gptModel == default)
-            gptModel = SelectedGptModel;
+            gptModel = !string.IsNullOrEmpty(SelectedGptModel) ? SelectedGptModel : GptModels.FirstOrDefault();
 
-        if (temperature == default)
-            temperature = Temperature;
+        ChatCompletionsOptions chatCompletionsOptions = new(gptModel, _chatRequestMessages);
 
-        if (maxTokens == default)
-            maxTokens = MaxTokens;
+        if (temperature != default)
+            chatCompletionsOptions.Temperature = temperature;
+        else if (Temperature != default)
+            chatCompletionsOptions.Temperature = Temperature;
 
-        if (seed == default)
-            seed = Seed;
+        if (maxTokens != default)
+            chatCompletionsOptions.MaxTokens = maxTokens;
+        else if (MaxTokens != default)
+            chatCompletionsOptions.MaxTokens = MaxTokens;
 
-        ChatCompletionsOptions chatCompletionsOptions = new(gptModel, _chatRequestMessages)
-        {
-            Temperature = temperature,
-            MaxTokens = maxTokens,
-            Seed = seed
-        };
+        if (seed != default)
+            chatCompletionsOptions.Seed = seed;
+        else if (Seed != default)
+            chatCompletionsOptions.Seed = Seed;
 
         string assistantMessageContent = string.Empty;
         await foreach (StreamingChatCompletionsUpdate chatUpdate in _client.GetChatCompletionsStreaming(chatCompletionsOptions))
@@ -65,12 +66,15 @@ public class ChatGptService : IChatGptService
         return assistantMessageContent;
     }
 
-    public string? GetChatHistory() // issue with deserialization: User and Assistant Message have protected set on Content and it is not populated in deserialization
+    public string? GetChatHistory()
     {
+        /* issue with deserialization: User and Assistant Message have protected set on Content and it is not populated in deserialization
         //string json = JsonConvert.SerializeObject(_chatRequestMessages, Formatting.Indented, new JsonSerializerSettings
         //{
         //    TypeNameHandling = TypeNameHandling.Objects
         //});
+        */
+
         List<Message> chatHistory = [];
 
         for (int messageNumber = 0; messageNumber < _chatRequestMessages?.Count; messageNumber++)
@@ -93,10 +97,13 @@ public class ChatGptService : IChatGptService
     public void RestoreChatRequestMessagesFromChatHistory(string? chatHistory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(chatHistory, nameof(chatHistory));
+
+        /* issue with deserialization: User and Assistant Message have protected set on Content and it is not populated in deserialization
         //_chatRequestMessages = JsonConvert.DeserializeObject<List<ChatRequestMessage>>(chatHistory, new JsonSerializerSettings
         //{
         //    TypeNameHandling = TypeNameHandling.Objects
         //});
+        */
 
         _chatRequestMessages.Clear();
 
